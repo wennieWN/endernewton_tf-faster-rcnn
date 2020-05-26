@@ -25,7 +25,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
   _allowed_border = 0
 
   # map of shape (..., H, W)
-  height, width = rpn_cls_score.shape[1:3]
+  height, width = rpn_cls_score.shape[1:3]  # ?,1
 
   # only keep anchors inside the image
   # 将超出原图像尺寸范围的候选窗直接删掉，保留剩下的窗口
@@ -120,8 +120,8 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
   bbox_outside_weights = _unmap(bbox_outside_weights, total_anchors, inds_inside, fill=0)
 
   # labels
-  labels = labels.reshape((1, height, width, A)).transpose(0, 3, 1, 2)
-  labels = labels.reshape((1, 1, A * height, width))
+  labels = labels.reshape((1, height, width, A)).transpose(0, 3, 1, 2)  # [1,9,?,1]
+  labels = labels.reshape((1, 1, A * height, width))  # [1,1,9*?,1]
   rpn_labels = labels
 
   # bbox_targets

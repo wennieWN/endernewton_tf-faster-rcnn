@@ -50,13 +50,13 @@ def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, 
   batch_inds = np.zeros((proposals.shape[0], 1), dtype=np.float32)
   blob = np.hstack((batch_inds, proposals.astype(np.float32, copy=False)))
 
-  print("blob.shape" + str(blob.shape))
+  # print("blob.shape" + str(blob.shape))
 
   return blob, scores
 
 
 def proposal_layer_tf(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors):
-  print("anchors.shape"+str(anchors.shape))
+  # print("anchors.shape"+str(anchors.shape))
   if type(cfg_key) == bytes:
     cfg_key = cfg_key.decode('utf-8')
   pre_nms_topN = cfg[cfg_key].RPN_PRE_NMS_TOP_N
@@ -73,19 +73,19 @@ def proposal_layer_tf(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_strid
 
   # Non-maximal suppression
   indices = tf.image.non_max_suppression(proposals, scores, max_output_size=post_nms_topN, iou_threshold=nms_thresh)
-  print("indices.shape" + str(indices.shape))
+  # print("indices.shape" + str(indices.shape))
 
   boxes = tf.gather(proposals, indices)
   boxes = tf.to_float(boxes)
   scores = tf.gather(scores, indices)
   scores = tf.reshape(scores, shape=(-1, 1))
-  print("boxes.shape" + str(boxes.shape))
+  # print("boxes.shape" + str(boxes.shape))
 
   # Only support single image as input
   batch_inds = tf.zeros((tf.shape(indices)[0], 1), dtype=tf.float32)
   blob = tf.concat([batch_inds, boxes], 1)
 
-  print("blob.shape" + str(blob.shape))
+  # print("blob.shape" + str(blob.shape))
   return blob, scores
 
 

@@ -243,12 +243,16 @@ class Network(object):
       initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
       initializer_bbox = tf.random_normal_initializer(mean=0.0, stddev=0.001)
 
+    # 1. 公共特征提取函数：_image_to_head(is_training)
     net_conv = self._image_to_head(is_training)
     with tf.variable_scope(self._scope, self._scope):
+      # 2. 获得所有anchor值，anchor包括H, W, X, Y四个参数
       # build the anchors for the image
       self._anchor_component()
+      # 3.
       # region proposal network
       rois = self._region_proposal(self._clp_filter, net_conv, is_training, initializer)
+      # 4. 将这些候选区域映射至5层卷积后的特征图上，并截取相应区域。
       # region of interest pooling
       if cfg.POOLING_MODE == 'crop':
         pool5 = self._crop_pool_layer(net_conv, rois, "pool5")
@@ -344,20 +348,22 @@ class Network(object):
                                 weights_initializer=initializer,
                                 padding='VALID', activation_fn=None, scope='rpn_cls_score')  # [1,?,1,18]
     # change it so that the score has 2 as its channel size
-    rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
-    rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")
-    rpn_cls_pred = tf.argmax(tf.reshape(rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")
-    rpn_cls_prob = self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")
+    rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')  # [1,?,?,2] = [1,?,1,2]
+    rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")  # [1,?,?,2] = [1,?,1,2]
+    rpn_cls_pred = tf.argmax(tf.reshape(rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")  # [?,]
+    rpn_cls_prob = self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")  # [1,?,?,18] = [1,?,1,18]
 
     # todo:wn modified
-    rpn_cls_prob.set_shape([1, None, 1, self._num_anchors * 2])
+    rpn_cls_prob.set_shape([1, None, 1, self._num_anchors * 2])  # [1,?,1,18]
 
     rpn_bbox_pred = slim.conv2d(rpn, self._num_anchors * 4, [1, 1], trainable=is_training,
                                 weights_initializer=initializer,
-                                padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
+                                padding='VALID', activation_fn=None, scope='rpn_bbox_pred')  # [1,?,1,36]
     if is_training:
-      rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
-      rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")
+      # 转换成实际目标框，经过NMS
+      rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")  # rois(?,5), roi_scores(?,1)
+      # 对rpn设置标签
+      rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")   # 不确定: [1,1,9*?,1]
       # Try to have a deterministic order for the computing graph, for reproducibility
       with tf.control_dependencies([rpn_labels]):
         rois, _ = self._proposal_target_layer(rois, roi_scores, "rpn_rois")
