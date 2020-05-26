@@ -34,11 +34,13 @@ class pascal_voc(imdb):
     self._devkit_path = self._get_default_path()
     self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
     self._classes = ('__background__',  # always index 0
-                     'aeroplane', 'bicycle', 'bird', 'boat',
-                     'bottle', 'bus', 'car', 'cat', 'chair',
-                     'cow', 'diningtable', 'dog', 'horse',
-                     'motorbike', 'person', 'pottedplant',
-                     'sheep', 'sofa', 'train', 'tvmonitor')
+                     'human', 'bicycle', 'vehicle')
+    # self._classes = ('__background__',  # always index 0
+    #                  'aeroplane', 'bicycle', 'bird', 'boat',
+    #                  'bottle', 'bus', 'car', 'cat', 'chair',
+    #                  'cow', 'diningtable', 'dog', 'horse',
+    #                  'motorbike', 'person', 'pottedplant',
+    #                  'sheep', 'sofa', 'train', 'tvmonitor')
     self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
     self._image_ext = '.jpg'
     self._image_index = self._load_image_set_index()
@@ -166,10 +168,14 @@ class pascal_voc(imdb):
     for ix, obj in enumerate(objs):
       bbox = obj.find('bndbox')
       # Make pixel indexes 0-based
-      x1 = float(bbox.find('xmin').text) - 1
-      y1 = float(bbox.find('ymin').text) - 1
-      x2 = float(bbox.find('xmax').text) - 1
-      y2 = float(bbox.find('ymax').text) - 1
+      # todo: wn modified delete -1 based on https://www.jianshu.com/p/1168fe20cc23
+      # if(float(bbox.find('xmin').text) == 0.0):
+      #   import pdb
+      #   pdb.set_trace()
+      x1 = float(bbox.find('xmin').text)
+      y1 = float(bbox.find('ymin').text)
+      x2 = float(bbox.find('xmax').text)
+      y2 = float(bbox.find('ymax').text)
       cls = self._class_to_ind[obj.find('name').text.lower().strip()]
       boxes[ix, :] = [x1, y1, x2, y2]
       gt_classes[ix] = cls

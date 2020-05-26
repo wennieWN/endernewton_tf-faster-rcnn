@@ -70,13 +70,15 @@ def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, 
 
 
 def proposal_layer_tf(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors):
+  # num_anchors = 9
+
   if type(cfg_key) == bytes:
     cfg_key = cfg_key.decode('utf-8')
   pre_nms_topN = cfg[cfg_key].RPN_PRE_NMS_TOP_N
   post_nms_topN = cfg[cfg_key].RPN_POST_NMS_TOP_N
   nms_thresh = cfg[cfg_key].RPN_NMS_THRESH
 
-  # Get the scores and bounding boxes
+  # Get the scores and bounding boxes 获取后9个
   scores = rpn_cls_prob[:, :, :, num_anchors:]
   scores = tf.reshape(scores, shape=(-1,))
   rpn_bbox_pred = tf.reshape(rpn_bbox_pred, shape=(-1, 4))

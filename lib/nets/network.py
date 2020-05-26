@@ -72,9 +72,9 @@ class Network(object):
       to_caffe = tf.transpose(bottom, [0, 3, 1, 2])
       # then force it to have channel 2
       reshaped = tf.reshape(to_caffe,
-                            tf.concat(axis=0, values=[[1, num_dim, -1], [input_shape[2]]]))
+                            tf.concat(axis=0, values=[[1, num_dim, -1], [input_shape[2]]]))  # [1, 2, -1, ?] <=> [1, 2, 9, ?]
       # then swap the channel back
-      to_tf = tf.transpose(reshaped, [0, 2, 3, 1])
+      to_tf = tf.transpose(reshaped, [0, 2, 3, 1])  # [1, ?, 2, 9]
       return to_tf
 
   def _softmax_layer(self, bottom, name):
@@ -184,6 +184,8 @@ class Network(object):
 
   def _proposal_target_layer(self, rois, roi_scores, name):
     with tf.variable_scope(name) as scope:
+      print('rois.shape' + str(rois.shape))
+
       rois, roi_scores, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights = tf.py_func(
         proposal_target_layer,
         [rois, roi_scores, self._gt_boxes, self._num_classes],
@@ -340,7 +342,7 @@ class Network(object):
 
     rpn_cls_score = slim.conv2d(rpn, self._num_anchors * 2, [1, 1], trainable=is_training,
                                 weights_initializer=initializer,
-                                padding='VALID', activation_fn=None, scope='rpn_cls_score')
+                                padding='VALID', activation_fn=None, scope='rpn_cls_score')  # [1,?,1,18]
     # change it so that the score has 2 as its channel size
     rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
     rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")
@@ -523,6 +525,9 @@ class Network(object):
   def train_step(self, sess, blobs, train_op):
     feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
                  self._gt_boxes: blobs['gt_boxes'], self._clp_info: blobs['clp_info']}
+    # todo: wn modified for debug
+    # anchors = sess.run(self._anchors,
+    #                 feed_dict = feed_dict)
     rpn_loss_cls, rpn_loss_box, loss_cls, loss_box, loss, _ = sess.run([self._losses["rpn_cross_entropy"],
                                                                         self._losses['rpn_loss_box'],
                                                                         self._losses['cross_entropy'],
@@ -536,6 +541,11 @@ class Network(object):
   def train_step_with_summary(self, sess, blobs, train_op):
     feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
                  self._gt_boxes: blobs['gt_boxes'], self._clp_info: blobs['clp_info']}
+
+    # todo: wn modified for debug
+    # anchors = sess.run(self._anchors,
+    #                 feed_dict=feed_dict)
+
     rpn_loss_cls, rpn_loss_box, loss_cls, loss_box, loss, summary, _ = sess.run([self._losses["rpn_cross_entropy"],
                                                                                  self._losses['rpn_loss_box'],
                                                                                  self._losses['cross_entropy'],

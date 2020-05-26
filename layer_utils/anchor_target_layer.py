@@ -28,6 +28,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
   height, width = rpn_cls_score.shape[1:3]
 
   # only keep anchors inside the image
+  # 将超出原图像尺寸范围的候选窗直接删掉，保留剩下的窗口
   inds_inside = np.where(
     (all_anchors[:, 0] >= -_allowed_border) &
     (all_anchors[:, 1] >= -_allowed_border) &
@@ -54,6 +55,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
                              np.arange(overlaps.shape[1])]
   gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
 
+  #  对于废弃的窗口，其对应的label为-1; 对于认为是目标的窗口，其对应的label为1; 对于认为是背景的窗口，其对应的label为0
   if not cfg.TRAIN.RPN_CLOBBER_POSITIVES:
     # assign bg labels first so that positive labels can clobber them
     # first set the negatives
@@ -70,21 +72,24 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     labels[max_overlaps < cfg.TRAIN.RPN_NEGATIVE_OVERLAP] = 0
 
   # subsample positive labels if we have too many
-  num_fg = int(cfg.TRAIN.RPN_FG_FRACTION * cfg.TRAIN.RPN_BATCHSIZE)
-  fg_inds = np.where(labels == 1)[0]
+  num_fg = int(cfg.TRAIN.RPN_FG_FRACTION * cfg.TRAIN.RPN_BATCHSIZE)  # 设置最多的标签为1的个数 0.25*256
+  fg_inds = np.where(labels == 1)[0]  # 所有标签为1的index值
   if len(fg_inds) > num_fg:
     disable_inds = npr.choice(
       fg_inds, size=(len(fg_inds) - num_fg), replace=False)
-    labels[disable_inds] = -1
+    labels[disable_inds] = -1  # 随机设置多余的标签为1的框变成-1
 
   # subsample negative labels if we have too many
-  num_bg = cfg.TRAIN.RPN_BATCHSIZE - np.sum(labels == 1)
-  bg_inds = np.where(labels == 0)[0]
+  num_bg = cfg.TRAIN.RPN_BATCHSIZE - np.sum(labels == 1)  # 可容纳的标签为0的个数
+  bg_inds = np.where(labels == 0)[0]  # 实际标签为0的个数
   if len(bg_inds) > num_bg:
     disable_inds = npr.choice(
       bg_inds, size=(len(bg_inds) - num_bg), replace=False)
-    labels[disable_inds] = -1
+    labels[disable_inds] = -1  # 随机设置多余的标签为0的框变成-1
 
+  # ？len(bg_inds) < num_bg怎么办
+
+  # 返回了每一个预测窗口与其对应iou最大的真实窗口的尺寸差别尺度
   bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
   bbox_targets = _compute_targets(anchors, gt_boxes[argmax_overlaps, :])
 
@@ -159,4 +164,5 @@ def _compute_targets(ex_rois, gt_rois):
   assert ex_rois.shape[1] == 4
   assert gt_rois.shape[1] == 5
 
+# 返回了每一个预测窗口与其对应iou最大的真实窗口的尺寸差别尺度
   return bbox_transform(ex_rois, gt_rois[:, :4]).astype(np.float32, copy=False)

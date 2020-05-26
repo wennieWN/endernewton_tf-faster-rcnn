@@ -41,6 +41,7 @@ def proposal_target_layer(rpn_rois, rpn_scores, gt_boxes, _num_classes):
 
   # Sample rois with classification labels and bounding box regression
   # targets
+
   labels, rois, roi_scores, bbox_targets, bbox_inside_weights = _sample_rois(
     all_rois, all_scores, gt_boxes, fg_rois_per_image,
     rois_per_image, _num_classes)
@@ -133,7 +134,7 @@ def _sample_rois(all_rois, all_scores, gt_boxes, fg_rois_per_image, rois_per_ima
   else:
     import pdb
     pdb.set_trace()
-
+  
   # The indices that we're selecting (both fg and bg)
   keep_inds = np.append(fg_inds, bg_inds)
   # Select sampled values from various arrays:

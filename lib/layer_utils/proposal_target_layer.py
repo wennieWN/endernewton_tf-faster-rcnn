@@ -25,6 +25,7 @@ def proposal_target_layer(rpn_rois, rpn_scores, gt_boxes, _num_classes):
   # (i.e., rpn.proposal_layer.ProposalLayer), or any other source
   all_rois = rpn_rois
   all_scores = rpn_scores
+  print('rpn_rois.shape' + str(rpn_rois.shape))
 
   # Include ground-truth boxes in the set of candidate rois
   if cfg.TRAIN.USE_GT:
@@ -41,6 +42,8 @@ def proposal_target_layer(rpn_rois, rpn_scores, gt_boxes, _num_classes):
 
   # Sample rois with classification labels and bounding box regression
   # targets
+  print('all_rois.shape'+ str(all_rois.shape))
+
   labels, rois, roi_scores, bbox_targets, bbox_inside_weights = _sample_rois(
     all_rois, all_scores, gt_boxes, fg_rois_per_image,
     rois_per_image, _num_classes)
