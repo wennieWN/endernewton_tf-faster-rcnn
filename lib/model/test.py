@@ -87,11 +87,11 @@ def _rescale_boxes(boxes, inds, scales):
 # wn modified
 def im_detect(sess, net, im, img_path):
 
-  blobs, im_scales = _get_blobs(im)  # 图片尺寸调整成最小600
+  blobs, im_scales = _get_blobs(im)  # 图片尺寸调整成最小600 # blobs [562, 1000 , 3]
   assert len(im_scales) == 1, "Only single-image batch implemented"
 
   im_blob = blobs['data']
-  blobs['im_info'] = np.array([im_blob.shape[1], im_blob.shape[2], im_scales[0]], dtype=np.float32)  # 850*600
+  blobs['im_info'] = np.array([im_blob.shape[1], im_blob.shape[2], im_scales[0]], dtype=np.float32)  # 562*1000
 
   # todo: clp_info
   #  wn modified
@@ -108,8 +108,8 @@ def im_detect(sess, net, im, img_path):
   # 2. get cls data [?, 2]
   valid_points= np.load(clp_path)  # [?, 2]
   # todo: width & height is not fixed
-  width_ori = im.shape[0]  # 500
-  height_ori = im.shape[1]  # 353
+  width_ori = im.shape[0]  # 900
+  height_ori = im.shape[1]  # 1600
 
   clp_ori = np.zeros([width_ori, height_ori], dtype=np.float32)  # 初始化
   clp_ori[tuple((valid_points.T[1, :], valid_points.T[0, :]))] = 1  # 设置存在点云的网格值为1 [500,353]
@@ -127,7 +127,7 @@ def im_detect(sess, net, im, img_path):
   clp_res = clp_res.reshape([1, width, height, 1])
 
   blobs['clp_info'] = clp_res  # [1,850,600,1]
-
+  # scores 300*2; bbox_pred 300*8; rois [xmin, ymin, xmax, ymax] 300*4;
   _, scores, bbox_pred, rois = net.test_image(sess, blobs['data'], blobs['im_info'], blobs['clp_info'])
   
   boxes = rois[:, 1:5] / im_scales[0]

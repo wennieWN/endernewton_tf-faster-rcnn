@@ -55,19 +55,25 @@ def generate_anchors_pre_tf(clp_filter, height, width, feat_stride=16, anchor_sc
   shift_x, shift_y = tf.meshgrid(shift_x, shift_y)
   sx = tf.reshape(shift_x, shape=(-1,))
   sy = tf.reshape(shift_y, shape=(-1,))
-  shifts = tf.transpose(tf.stack([sx, sy, sx, sy]))  # 竖着排
+  shifts = tf.transpose(tf.stack([sx, sy, sx, sy]))  # 竖着排。。。。不，是横着
   K = tf.multiply(width, height)  # 原代码
 
-  # 将点云图展开
+  # 将点云图展开 需要横向展开
   # clp_filter = tf.placeholder(tf.int32, shape=[None, None]) # 参数获取
-  clp_filter_flat = tf.reshape(tf.transpose(clp_filter), (K, -1))  # shape: [23*32, 1]
+  # clp_filter_flat = tf.reshape(tf.transpose(clp_filter), (K, -1))  # shape: [23*32, 1]
+  clp_filter_flat = tf.reshape(clp_filter, (K, -1))  # 修改后：横着
   clp_filter_index = tf.where(clp_filter_flat)[:, 0]
   # 获取筛选后的坐标点
-  shifts_filter = tf.gather(shifts, clp_filter_index)  # shpae: [none, 4]
+  shifts_filter = tf.gather(shifts, clp_filter_index)  # shpae: [none, 4] 横着
   K = tf.size(clp_filter_index, out_type=tf.int32)
   shifts = tf.transpose(tf.reshape(shifts_filter, shape=[1, K, 4]), perm=(1, 0, 2))
 
-  anchors = generate_anchors(ratios=np.array(anchor_ratios), scales=np.array(anchor_scales))
+  # todo: temp change
+  # shifts = tf.transpose(tf.stack([sx, sy, sx, sy]))  # 竖着排
+  # K = tf.multiply(width, height)
+  # shifts = tf.transpose(tf.reshape(shifts, shape=[1, K, 4]), perm=(1, 0, 2))
+
+  anchors = generate_anchors(ratios=np.array(anchor_ratios), scales=np.array(anchor_scales))  # 生成9个anchors
   A = anchors.shape[0]
   anchor_constant = tf.constant(anchors.reshape((1, A, 4)), dtype=tf.int32)
 

@@ -10,3 +10,4 @@ lib/pycocotools/_mask.so
 /data/VOCdevkit2007
 /data/voc_2007_trainval+voc_2012_trainval
 /data/imagenet_weights
+/data/demo_output

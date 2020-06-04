@@ -339,10 +339,15 @@ class Network(object):
     # rpn.set_shape([1, None, 1, cfg.RPN_CHANNELS])
     # 根据点云图，筛选特征
     # rpn维度变化：[1,?,?,512] => [1,?,1,512]
-    clp_filter_index = tf.where(clp_filter)  # 获得val=1的二维坐标值 [?,2]
+
+    # todo: wn debug
+    clp_filter_index = tf.where(clp_filter)  # 获得val=1的二维坐标值 [?,2] 横着
+    # 这里需要改成竖着得到feature_filter. 不，不需要
+    # clp_filter_index = tf.where(tf.transpose(clp_filter))  # 获得val=1的二维坐标值 [?,2]
+    # clp_filter_index = tf.stack([clp_filter_index[:, 1], clp_filter_index[:, 0]], 1)
+
     feature_filter = tf.gather_nd(rpn[0, :, :, :], clp_filter_index)  # 筛选特征 [1,?,?,512] => [?, 512]
     rpn = tf.reshape(feature_filter, [1, -1, 1, cfg.RPN_CHANNELS])  # 修改尺寸 => [1,?,1,512]
-
 
     rpn_cls_score = slim.conv2d(rpn, self._num_anchors * 2, [1, 1], trainable=is_training,
                                 weights_initializer=initializer,
@@ -370,6 +375,7 @@ class Network(object):
     else:
       if cfg.TEST.MODE == 'nms':
         rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
+        self._rois_temp = rois
       elif cfg.TEST.MODE == 'top':
         rois, _ = self._proposal_top_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
       else:
@@ -429,15 +435,18 @@ class Network(object):
 
     # todo: _clp_filter Initialize & Max pooling
     # wn modified
-    self._clp_info = tf.placeholder(tf.int32, shape=[1, None, None, 1])  # [1, 600, 932, 1]
+    self._clp_info = tf.placeholder(tf.int32, shape=[1, None, None, 1])  # [1, 562, 1000, 1]
 
     clp_filter_temp = self._clp_info
     # self._feat_stride[0] = 16
     clp_pooling = tf.nn.max_pool(clp_filter_temp, [1, self._feat_stride[0], self._feat_stride[0], 1],
                                  [1, self._feat_stride[0], self._feat_stride[0], 1], padding='SAME')
+    # todo: temp change
+    # clp_pooling = tf.nn.max_pool(clp_pooling, [1, 15, 15, 1], [1, 1, 1, 1], padding='SAME')
+    clp_pooling = tf.nn.max_pool(clp_pooling, [1, 10, 10, 1], [1, 1, 1, 1], padding='SAME')
     clp_pooling = clp_pooling[0, :, :, 0]
     print("pooling: " + str(clp_pooling.shape))
-    self._clp_filter = clp_pooling  # [38, 59] （同特征图net_conv尺寸一致）
+    self._clp_filter = clp_pooling  # [36, 63] （同特征图net_conv尺寸一致）
 
 
     training = mode == 'TRAIN'
@@ -512,7 +521,12 @@ class Network(object):
     feed_dict = {self._image: image,
                  self._im_info: im_info,
                  self._clp_info: clp_info}
+    # _; cls_prob 300*2; bbox_pred 300*8; rois [xmin, ymin, xmax, ymax] 300*4;
 
+    # todo: wn modified for debug
+    # anchors, rois_temp = sess.run([self._anchors,
+    #                                               self._rois_temp],
+    #                                              feed_dict=feed_dict)
     cls_score, cls_prob, bbox_pred, rois = sess.run([self._predictions["cls_score"],
                                                      self._predictions['cls_prob'],
                                                      self._predictions['bbox_pred'],

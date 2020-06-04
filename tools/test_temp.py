@@ -31,7 +31,7 @@ def parse_args():
 
   parser.add_argument('--model', dest='model',
             help='model to test',
-            default='../output/res101/voc_2007_trainval/default/res101_faster_rcnn_iter_200.ckpt', type=str)
+            default='../output/res101/voc_2007_trainval/default/res101_faster_rcnn_iter_2000.ckpt', type=str)
 
   parser.add_argument('--imdb', dest='imdb_name',
             help='dataset to test',
